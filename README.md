@@ -1,2 +1,38 @@
 # check-lalsuite-timing-model
-This package includes a script compares the time-delay (barycentering) model of LALSuite against PINT, along with a patch to LALSuite required to get individual time-delay components. 
+
+This package compares the LALSuite time-delay model against PINT. It includes
+a patch to LALSuite that exposes the individual delay components.
+
+Public LVK LALSuite repositories:
+
+- GitHub: <https://github.com/lscsoft/lalsuite>
+- LVK GitLab: <https://git.ligo.org/lscsoft/lalsuite>
+
+## Paper data runs
+
+The scripts in `reproduce/` generate the comparison data for Figs. 3, 4, and
+5, plus one example using Sco X-1 binary parameters:
+
+```bash
+./reproduce/fig03-old-tdb.sh
+./reproduce/fig04-new-tdb.sh
+./reproduce/fig05-new-tdb-bipm.sh
+./reproduce/sco-x1-binary.sh
+```
+
+They write into separate subdirectories under `results/`.
+
+## Quick plots
+
+Plot every `difference_*` field found in a result:
+
+```bash
+python3 scripts/plotTimingDifferences.py results/fig03-old-tdb
+python3 scripts/plotTimingDifferences.py results/fig04-new-tdb
+python3 scripts/plotTimingDifferences.py results/fig05-new-tdb-bipm
+python3 scripts/plotTimingDifferences.py results/sco-x1-binary
+```
+
+Each command writes `timing-differences.png` into the corresponding result
+directory. Pass either a result directory or its `timing-components.npz` file.
+Use `--output figure.pdf` to select another path or format.

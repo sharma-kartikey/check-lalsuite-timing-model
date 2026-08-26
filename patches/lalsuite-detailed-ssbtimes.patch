@@ -1,0 +1,264 @@
+diff --git a/lalpulsar/lib/LALBarycenter.c b/lalpulsar/lib/LALBarycenter.c
+index 9a5182c..9c16101 100644
+--- a/lalpulsar/lib/LALBarycenter.c
++++ b/lalpulsar/lib/LALBarycenter.c
+@@ -918,6 +918,7 @@ XLALBarycenter( EmissionTime *emit,                    /**< [out] emission-time
+ 
+     obsTerm /= ( 1.0 - IFTE_LC ) * ( REAL8 )IFTE_K;
+   }
++  emit->obsTerm = obsTerm;
+ 
+   /********************************************************************
+    * Now including Earth's rotation
+@@ -1031,6 +1032,8 @@ XLALBarycenter( EmissionTime *emit,                    /**< [out] emission-time
+ 
+     b = sqrt( earth->rse * earth->rse - seDotN * seDotN );
+     db = ( earth->rse * earth->drse - seDotN * dseDotN ) / b;
++    emit->rel_impact_sun = b / rsun;
++    emit->rel_impact_sun *= ( seDotN > 0.e0 ) ? -1 : 1;
+ 
+ 
+     if ( ( b < rsun ) && ( seDotN < 0.e0 ) ) { /*if gw travels thru interior of Sun*/
+@@ -1282,6 +1285,7 @@ XLALBarycenterOpt( EmissionTime *emit,                 /**< [out] emission-time
+ 
+     obsTerm /= ( 1.0 - IFTE_LC ) * ( REAL8 )IFTE_K;
+   }
++  emit->obsTerm = obsTerm;
+ 
+   /*---------------------------------------------------------------------
+    * Now including Earth's rotation
+@@ -1366,6 +1370,8 @@ XLALBarycenterOpt( EmissionTime *emit,                 /**< [out] emission-time
+ 
+   REAL8 b = sqrt( earth->rse * earth->rse - seDotN * seDotN );
+   REAL8 db = ( earth->rse * earth->drse - seDotN * dseDotN ) / b;
++  emit->rel_impact_sun = b / rsun;
++  emit->rel_impact_sun *= ( seDotN > 0 ) ? -1 : 1;
+ 
+   /* if gw travels thru interior of Sun*/
+   if ( ( b < rsun ) && ( seDotN < 0 ) ) {
+diff --git a/lalpulsar/lib/LALBarycenter.h b/lalpulsar/lib/LALBarycenter.h
+index b870532..53a10e8 100644
+--- a/lalpulsar/lib/LALBarycenter.h
++++ b/lalpulsar/lib/LALBarycenter.h
+@@ -250,9 +250,13 @@ typedef struct tagEmissionTime {
+ 
+   REAL8 shapiro;        /**<  the Shapiro delay */
+   REAL8 dshapiro;       /**<  d(Shapiro)/d(tgps) */
++  REAL8 rel_impact_sun; /**< signed ray impact parameter in solar radii;
++                         * negative if the ray does not pass the Sun */
+ 
+   REAL8 erot;           /**< Earth rotation delay */
+   REAL8 derot;          /**< d(erot)/d(tgps) */
++
++  REAL8 obsTerm;        /**< topocentric contribution to the Einstein delay */
+ }
+ EmissionTime;
+ 
+diff --git a/lalpulsar/lib/SSBtimes.c b/lalpulsar/lib/SSBtimes.c
+index 5199e03..990ec27 100644
+--- a/lalpulsar/lib/SSBtimes.c
++++ b/lalpulsar/lib/SSBtimes.c
+@@ -42,6 +42,7 @@ const UserChoices SSBprecisionChoices = {
+   { SSBPREC_NEWTONIAN,          "newtonian" },
+   { SSBPREC_RELATIVISTIC,       "relativistic" },
+   { SSBPREC_RELATIVISTICOPT,    "relativisticopt" },
++  { SSBPREC_RELATIVISTICOPT_DETAILED, "relativisticopt-detailed" },
+   { SSBPREC_DMOFF,              "DMoff"},
+ };
+ 
+@@ -261,6 +262,7 @@ XLALAddBinaryTimes( SSBtimes **tSSBOut,                         //!< [out] refer
+                     const PulsarDopplerParams *Doppler         //!< [in] pulsar Doppler parameters, includes binary orbit parameters */
+                   )
+ {
++  XLAL_CHECK( tSSBOut != NULL, XLAL_EINVAL, "Invalid NULL input 'tSSBOut'\n" );
+   XLAL_CHECK( tSSBIn != NULL, XLAL_EINVAL, "Invalid NULL input 'tSSB'\n" );
+   XLAL_CHECK( tSSBIn->DeltaT != NULL, XLAL_EINVAL, "Invalid NULL input 'tSSBIn->DeltaT'\n" );
+   XLAL_CHECK( tSSBIn->Tdot != NULL, XLAL_EINVAL, "Invalid NULL input 'tSSBIn->Tdot'\n" );
+@@ -271,6 +273,7 @@ XLALAddBinaryTimes( SSBtimes **tSSBOut,                         //!< [out] refer
+   UINT4 numSteps = tSSBIn->DeltaT->length;              /* number of timesteps */
+   XLAL_CHECK( tSSBIn->Tdot->length == numSteps, XLAL_EINVAL,
+               "Length tSSBIn->DeltaT = %d, while tSSBIn->Tdot = %d\n", numSteps, tSSBIn->Tdot->length );
++  BOOLEAN is_detailed = ( tSSBIn->total != NULL );
+ 
+   SSBtimes *binaryTimes;
+   // ----- prepare output timeseries: either allocate or re-use existing
+@@ -286,9 +289,25 @@ XLALAddBinaryTimes( SSBtimes **tSSBOut,                         //!< [out] refer
+     XLAL_CHECK( binaryTimes->Tdot->length == numSteps, XLAL_EINVAL,
+                 "Length tSSBOut->Tdot = %d, while tSSBIn->Tdot = %d\n", binaryTimes->Tdot->length, numSteps );
+     // ... and copy the vector contents from the input SSB vector
++#define CHECK_AND_COPY_FIELD(FIELD) do { \
++      if ( tSSBIn->FIELD != NULL ) { \
++        XLAL_CHECK( binaryTimes->FIELD != NULL, XLAL_EINVAL, "Missing output field '%s'\n", #FIELD ); \
++        XLAL_CHECK( tSSBIn->FIELD->length == numSteps && binaryTimes->FIELD->length == numSteps, XLAL_EINVAL ); \
++        memcpy( binaryTimes->FIELD->data, tSSBIn->FIELD->data, numSteps * sizeof( binaryTimes->FIELD->data[0] ) ); \
++      } \
++    } while ( 0 )
+     binaryTimes->refTime = tSSBIn->refTime;
+-    memcpy( binaryTimes->DeltaT->data, tSSBIn->DeltaT->data, numSteps * sizeof( binaryTimes->DeltaT->data[0] ) );
+-    memcpy( binaryTimes->Tdot->data,   tSSBIn->Tdot->data,   numSteps * sizeof( binaryTimes->Tdot->data[0] ) );
++    CHECK_AND_COPY_FIELD( DeltaT );
++    CHECK_AND_COPY_FIELD( Tdot );
++    CHECK_AND_COPY_FIELD( total );
++    CHECK_AND_COPY_FIELD( roemer_geo );
++    CHECK_AND_COPY_FIELD( roemer_obs );
++    CHECK_AND_COPY_FIELD( shapiro );
++    CHECK_AND_COPY_FIELD( einstein_geo );
++    CHECK_AND_COPY_FIELD( einstein_obs );
++    CHECK_AND_COPY_FIELD( binary );
++    CHECK_AND_COPY_FIELD( rel_impact_sun );
++#undef CHECK_AND_COPY_FIELD
+   } // re-using input vector
+ 
+   /* ----- convenience variables */
+@@ -362,6 +381,10 @@ XLALAddBinaryTimes( SSBtimes **tSSBOut,                         //!< [out] refer
+ 
+     binaryTimes->DeltaT->data[i] -= R;
+     binaryTimes->Tdot->data[i]   *= dtEM_dtSSB;
++    if ( is_detailed ) {
++      binaryTimes->binary->data[i] = R;
++      binaryTimes->total->data[i] += R;
++    }
+ 
+   } /* for i < numSteps */
+ 
+@@ -476,6 +499,24 @@ XLALDuplicateSSBtimes( const SSBtimes *tSSB )
+     memcpy( ret->Tdot->data, tSSB->Tdot->data, len * sizeof( ret->Tdot->data[0] ) );
+   }
+ 
++#define DUPLICATE_FIELD(FIELD) do { \
++    if ( tSSB->FIELD != NULL ) { \
++      len = tSSB->FIELD->length; \
++      ret->FIELD = XLALCreateREAL8Vector( len ); \
++      XLAL_CHECK_NULL( ret->FIELD != NULL, XLAL_EFUNC, "Could not duplicate '%s'\n", #FIELD ); \
++      memcpy( ret->FIELD->data, tSSB->FIELD->data, len * sizeof( ret->FIELD->data[0] ) ); \
++    } \
++  } while ( 0 )
++  DUPLICATE_FIELD( total );
++  DUPLICATE_FIELD( roemer_geo );
++  DUPLICATE_FIELD( roemer_obs );
++  DUPLICATE_FIELD( shapiro );
++  DUPLICATE_FIELD( einstein_geo );
++  DUPLICATE_FIELD( einstein_obs );
++  DUPLICATE_FIELD( binary );
++  DUPLICATE_FIELD( rel_impact_sun );
++#undef DUPLICATE_FIELD
++
+   return ret;
+ 
+ } /* XLALDuplicateSSBtimes() */
+@@ -598,6 +639,7 @@ XLALGetSSBtimes( const DetectorStateSeries *DetectorStates,     /**< [in] detect
+     break;
+ 
+   case SSBPREC_RELATIVISTICOPT:       /* use optimized version XLALBarycenterOpt() */
++  case SSBPREC_RELATIVISTICOPT_DETAILED:
+ 
+     baryinput.site = DetectorStates->detector;
+     baryinput.site.location[0] /= LAL_C_SI;
+@@ -608,6 +650,20 @@ XLALGetSSBtimes( const DetectorStateSeries *DetectorStates,     /**< [in] detect
+     baryinput.delta = delta;
+     baryinput.dInv = 0;
+ 
++    if ( precision == SSBPREC_RELATIVISTICOPT_DETAILED ) {
++      ret->total = XLALCreateREAL8Vector( numSteps );
++      ret->roemer_geo = XLALCreateREAL8Vector( numSteps );
++      ret->roemer_obs = XLALCreateREAL8Vector( numSteps );
++      ret->shapiro = XLALCreateREAL8Vector( numSteps );
++      ret->einstein_geo = XLALCreateREAL8Vector( numSteps );
++      ret->einstein_obs = XLALCreateREAL8Vector( numSteps );
++      ret->binary = XLALCreateREAL8Vector( numSteps );
++      ret->rel_impact_sun = XLALCreateREAL8Vector( numSteps );
++      XLAL_CHECK_NULL( ret->total && ret->roemer_geo && ret->roemer_obs && ret->shapiro &&
++                       ret->einstein_geo && ret->einstein_obs && ret->binary && ret->rel_impact_sun,
++                       XLAL_EFUNC, "Failed to allocate detailed SSB timing vectors\n" );
++    }
++
+     for ( UINT4 i = 0; i < numSteps; i++ ) {
+       EmissionTime emit;
+       DetectorState *state = &( DetectorStates->data[i] );
+@@ -620,6 +676,18 @@ XLALGetSSBtimes( const DetectorStateSeries *DetectorStates,     /**< [in] detect
+       ret->DeltaT->data[i] = XLALGPSGetREAL8( &emit.te ) - refTimeREAL8;
+       ret->Tdot->data[i] = emit.tDot;
+ 
++      if ( precision == SSBPREC_RELATIVISTICOPT_DETAILED ) {
++        /* Convert LAL's t_e - t_a convention to TEMPO2/PINT D = t_a - t_e. */
++        ret->total->data[i] = - emit.deltaT;
++        ret->roemer_geo->data[i] = - emit.roemer;
++        ret->roemer_obs->data[i] = - emit.erot;
++        ret->shapiro->data[i] = emit.shapiro;
++        ret->einstein_geo->data[i] = - state->earthState.einstein;
++        ret->einstein_obs->data[i] = - emit.obsTerm;
++        ret->binary->data[i] = 0;
++        ret->rel_impact_sun->data[i] = emit.rel_impact_sun;
++      }
++
+     } /* for i < numSteps */
+     // free buffer memory
+     XLALFree( bBuffer );
+@@ -832,6 +900,14 @@ XLALDestroySSBtimes( SSBtimes *tSSB )
+   if ( tSSB->Tdot ) {
+     XLALDestroyREAL8Vector( tSSB->Tdot );
+   }
++  XLALDestroyREAL8Vector( tSSB->total );
++  XLALDestroyREAL8Vector( tSSB->roemer_geo );
++  XLALDestroyREAL8Vector( tSSB->roemer_obs );
++  XLALDestroyREAL8Vector( tSSB->shapiro );
++  XLALDestroyREAL8Vector( tSSB->einstein_geo );
++  XLALDestroyREAL8Vector( tSSB->einstein_obs );
++  XLALDestroyREAL8Vector( tSSB->binary );
++  XLALDestroyREAL8Vector( tSSB->rel_impact_sun );
+   XLALFree( tSSB );
+ 
+ }
+diff --git a/lalpulsar/lib/SSBtimes.h b/lalpulsar/lib/SSBtimes.h
+index 925b637..3db3e37 100644
+--- a/lalpulsar/lib/SSBtimes.h
++++ b/lalpulsar/lib/SSBtimes.h
+@@ -46,6 +46,7 @@ typedef enum tagSSBprecision {
+   SSBPREC_NEWTONIAN,            /**< simple Newtonian: \f$ \tau = t + \vec{r}\cdot\vec{n}/c \f$ */
+   SSBPREC_RELATIVISTIC,         /**< detailed relativistic: \f$ \tau=\tau(t; \vec{n}, \vec{r}) \f$ */
+   SSBPREC_RELATIVISTICOPT,      /**< optimized relativistic, numerically equivalent to #SSBPREC_RELATIVISTIC, but faster */
++  SSBPREC_RELATIVISTICOPT_DETAILED, /**< optimized relativistic timing plus individual delay components */
+   SSBPREC_DMOFF,                /**< switch off all demodulatoin terms */
+   SSBPREC_LAST                  /**< end marker */
+ } SSBprecision;
+@@ -53,14 +54,25 @@ typedef enum tagSSBprecision {
+ /** Static array of all \c SSBprecision choices, for use by the UserInput module parsing routines */
+ extern const UserChoices SSBprecisionChoices;
+ 
+-/** Simple container for two REAL8-vectors, namely the SSB-timings DeltaT_alpha  and Tdot_alpha,
+- * with one entry per SFT-timestamp. These are required input for XLALNewDemod().
+- * We also store the SSB reference-time tau0.
++/** Container for SSB/source-emission timings, with one entry per timestamp.
++ *
++ * The component vectors are allocated only when XLALGetSSBtimes() is called
++ * with #SSBPREC_RELATIVISTICOPT_DETAILED. Delay components use the TEMPO2/PINT
++ * convention \f$D=t_a-t_e\f$.
+  */
+ typedef struct tagSSBtimes {
+   LIGOTimeGPS refTime;          /**< reference-time 'tau0' */
+   REAL8Vector *DeltaT;          /**< Time-difference of SFT-alpha - tau0 in SSB-frame */
+   REAL8Vector *Tdot;            /**< dT/dt : time-derivative of SSB-time wrt local time for SFT-alpha */
++
++  REAL8Vector *total;           /**< total delay: Roemer + Shapiro + Einstein + binary */
++  REAL8Vector *roemer_geo;      /**< Roemer delay from the SSB to the geocenter */
++  REAL8Vector *roemer_obs;      /**< Roemer delay from the geocenter to the detector */
++  REAL8Vector *shapiro;         /**< solar Shapiro delay */
++  REAL8Vector *einstein_geo;    /**< geocentric Einstein delay, TT - TDB/TCB */
++  REAL8Vector *einstein_obs;    /**< topocentric contribution to the Einstein delay */
++  REAL8Vector *binary;          /**< binary Roemer delay, \f$t_{SSB}-t_e\f$ */
++  REAL8Vector *rel_impact_sun;  /**< signed solar impact parameter in solar radii */
+ } SSBtimes;
+ 
+ /** Multi-IFO container for SSB timings */
+@@ -75,6 +87,11 @@ typedef struct tagMultiSSBtimes {
+ /*---------- exported Global variables ----------*/
+ 
+ /*---------- exported prototypes [API] ----------*/
++#ifdef SWIG /* SWIG interface directives */
++SWIGLAL( INOUT_STRUCTS( SSBtimes **, tSSBOut ) );
++SWIGLAL( INOUT_STRUCTS( MultiSSBtimes **, multiSSBOut ) );
++#endif /* SWIG */
++
+ int XLALAddBinaryTimes( SSBtimes **tSSBOut, const SSBtimes *tSSBIn, const PulsarDopplerParams *Doppler );
+ int XLALAddMultiBinaryTimes( MultiSSBtimes **multiSSBOut, const MultiSSBtimes *multiSSBIn, const PulsarDopplerParams *Doppler );
+ SSBtimes *XLALDuplicateSSBtimes( const SSBtimes *tSSB );
