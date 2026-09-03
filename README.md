@@ -1,7 +1,8 @@
 # check-lalsuite-timing-model
 
 This package compares the LALSuite time-delay model against PINT. It includes
-a patch to LALSuite that exposes the individual delay components.
+a patch to LALSuite that exposes the individual delay components and reproduces
+the comparisons in [the accompanying paper](https://arxiv.org/abs/2608.26271).
 
 Public LVK LALSuite repositories:
 
