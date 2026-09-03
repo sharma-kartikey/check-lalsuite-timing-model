@@ -23,11 +23,27 @@ The scripts in `reproduce/` generate the comparison data for Figs. 3, 4, and
 
 They write into separate subdirectories under `results/`.
 
+## Quick plots
+
+Plot every `difference_*` field found in a result:
+
+```bash
+python3 scripts/plotTimingDifferences.py results/fig03-old-tdb
+python3 scripts/plotTimingDifferences.py results/fig04-new-tdb
+python3 scripts/plotTimingDifferences.py results/fig05-new-tdb-bipm
+python3 scripts/plotTimingDifferences.py results/sco-x1-binary
+```
+
+Each command writes `timing-differences.png` into the corresponding result
+directory. Pass either a result directory or its `timing-components.npz` file.
+Use `--output figure.pdf` to select another path or format.
+
 ## Reproduced results
 
 The repository includes the generated numerical data, summaries, run logs, and
-quick-look figures. Each plot shows every available LALSuite-minus-PINT timing
-component; the three paper runs contain one curve for each sky position.
+the quick-look figures produced by the commands above. Each plot shows every
+available LALSuite-minus-PINT timing component; the three paper runs contain
+one curve for each sky position.
 
 ### Figure 3: legacy LALSuite TDB model
 
@@ -47,18 +63,3 @@ component; the three paper runs contain one curve for each sky position.
 
 The underlying `timing-components.npz`, `summary.json`, `timings.json`, and
 `metadata.json` files are in the corresponding result directories.
-
-## Quick plots
-
-Plot every `difference_*` field found in a result:
-
-```bash
-python3 scripts/plotTimingDifferences.py results/fig03-old-tdb
-python3 scripts/plotTimingDifferences.py results/fig04-new-tdb
-python3 scripts/plotTimingDifferences.py results/fig05-new-tdb-bipm
-python3 scripts/plotTimingDifferences.py results/sco-x1-binary
-```
-
-Each command writes `timing-differences.png` into the corresponding result
-directory. Pass either a result directory or its `timing-components.npz` file.
-Use `--output figure.pdf` to select another path or format.
