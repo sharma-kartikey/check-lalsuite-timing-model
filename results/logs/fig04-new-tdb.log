@@ -1,0 +1,10 @@
+std_total           : min=2.16e-08 s  mean=2.49e-08 s  max=2.81e-08 s
+std_roemer          : min=2.16e-08 s  mean=2.47e-08 s  max=2.80e-08 s
+std_roemer_geo      : min=4.21e-09 s  mean=1.14e-08 s  max=1.50e-08 s
+std_roemer_obs      : min=1.92e-08 s  mean=2.16e-08 s  max=2.34e-08 s
+std_shapiro         : min=3.10e-10 s  mean=1.23e-09 s  max=1.79e-09 s
+std_einstein        : min=1.20e-09 s  mean=1.20e-09 s  max=1.20e-09 s
+std_einstein_geo    : min=8.85e-10 s  mean=8.85e-10 s  max=8.85e-10 s
+std_einstein_obs    : min=1.20e-09 s  mean=1.20e-09 s  max=1.20e-09 s
+tdot_relative_error : min=9.38e-13  mean=7.60e-09  max=1.54e-08
+wrote /home/repr/work/CW/Barycenter/check-lalsuite-timing-model/results/fig04-new-tdb

@@ -23,6 +23,31 @@ The scripts in `reproduce/` generate the comparison data for Figs. 3, 4, and
 
 They write into separate subdirectories under `results/`.
 
+## Reproduced results
+
+The repository includes the generated numerical data, summaries, run logs, and
+quick-look figures. Each plot shows every available LALSuite-minus-PINT timing
+component; the three paper runs contain one curve for each sky position.
+
+### Figure 3: legacy LALSuite TDB model
+
+[![Legacy TDB timing differences](results/fig03-old-tdb/timing-differences.png)](results/fig03-old-tdb/timing-differences.png)
+
+### Figure 4: updated LALSuite TDB model
+
+[![Updated TDB timing differences](results/fig04-new-tdb/timing-differences.png)](results/fig04-new-tdb/timing-differences.png)
+
+### Figure 5: updated TDB model with PINT BIPM corrections
+
+[![TDB and BIPM timing differences](results/fig05-new-tdb-bipm/timing-differences.png)](results/fig05-new-tdb-bipm/timing-differences.png)
+
+### Sco X-1 binary example
+
+[![Sco X-1 binary timing differences](results/sco-x1-binary/timing-differences.png)](results/sco-x1-binary/timing-differences.png)
+
+The underlying `timing-components.npz`, `summary.json`, `timings.json`, and
+`metadata.json` files are in the corresponding result directories.
+
 ## Quick plots
 
 Plot every `difference_*` field found in a result:

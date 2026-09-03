@@ -1,0 +1,6 @@
+{
+  "lal_GetDetectorStates": 0.7185453539714217,
+  "lal_GetSSBtimes_mean": 0.0022572320885956287,
+  "pint_delay_mean": 0.01702620298601687,
+  "pint_get_TOAs_array": 5.6775612339843065
+}

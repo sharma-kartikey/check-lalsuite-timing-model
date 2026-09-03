@@ -1,0 +1,11 @@
+std_total           : min=2.93e-08 s  mean=2.93e-08 s  max=2.93e-08 s
+std_roemer          : min=2.82e-08 s  mean=2.82e-08 s  max=2.82e-08 s
+std_roemer_geo      : min=1.53e-08 s  mean=1.53e-08 s  max=1.53e-08 s
+std_roemer_obs      : min=2.30e-08 s  mean=2.30e-08 s  max=2.30e-08 s
+std_shapiro         : min=2.20e-09 s  mean=2.20e-09 s  max=2.20e-09 s
+std_einstein        : min=1.20e-09 s  mean=1.20e-09 s  max=1.20e-09 s
+std_einstein_geo    : min=8.85e-10 s  mean=8.85e-10 s  max=8.85e-10 s
+std_einstein_obs    : min=1.20e-09 s  mean=1.20e-09 s  max=1.20e-09 s
+std_binary          : min=7.12e-09 s  mean=7.12e-09 s  max=7.12e-09 s
+tdot_relative_error : min=3.11e-10  mean=1.55e-06  max=2.45e-06
+wrote /home/repr/work/CW/Barycenter/check-lalsuite-timing-model/results/sco-x1-binary
