@@ -21,3 +21,6 @@ PYTHON=${PYTHON:-python3}
   --sky-position 1.1000028170845237 -0.99003449096536966 \
   --sky-position 3.9302759765568003 -0.088003185184927488 \
   --sky-position 1.8501629005379903  0.65210958983022616
+
+"$PYTHON" "$ROOT/scripts/plotTimingDifferences.py" \
+  "$ROOT/results/fig05-new-tdb-bipm"

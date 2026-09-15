@@ -514,13 +514,23 @@ def check_thresholds(summary, std_thresholds, tdot_threshold):
         )
 
 
-def report(summary):
+def report(summary, arrays):
     width = max(len(key) for key in summary)
     for key, stats in summary.items():
         unit = "" if key == "tdot_relative_error" else " s"
         print(
             f"{key:<{width}} : min={stats['min']:#.3g}{unit}  "
             f"mean={stats['mean']:#.3g}{unit}  max={stats['max']:#.3g}{unit}"
+        )
+
+    print("\nstd_total by sky position:")
+    count_width = len(str(len(arrays["std_total"])))
+    for index, (alpha, delta, std) in enumerate(
+        zip(arrays["alpha"], arrays["delta"], arrays["std_total"]), start=1
+    ):
+        print(
+            f"  point {index:>{count_width}}: alpha={alpha:.12g} rad  "
+            f"delta={delta:.12g} rad  std_total={std * 1e9:.6g} ns"
         )
 
 
@@ -604,7 +614,7 @@ def main() -> None:
     write_json(args.output_dir / "summary.json", summary)
     write_json(args.output_dir / "timings.json", timings)
     write_json(args.output_dir / "metadata.json", metadata)
-    report(summary)
+    report(summary, arrays)
     print(f"wrote {args.output_dir}")
 
 

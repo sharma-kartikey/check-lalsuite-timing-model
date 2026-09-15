@@ -28,3 +28,6 @@ PYTHON=${PYTHON:-python3}
   --tp 1368887867.34 \
   --ecc 0 \
   --argp 0
+
+"$PYTHON" "$ROOT/scripts/plotTimingDifferences.py" \
+  "$ROOT/results/sco-x1-binary"

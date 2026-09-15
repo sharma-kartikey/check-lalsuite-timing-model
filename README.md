@@ -34,9 +34,12 @@ python3 scripts/plotTimingDifferences.py results/fig05-new-tdb-bipm
 python3 scripts/plotTimingDifferences.py results/sco-x1-binary
 ```
 
-Each command writes `timing-differences.png` into the corresponding result
-directory. Pass either a result directory or its `timing-components.npz` file.
-Use `--output figure.pdf` to select another path or format.
+Each command writes `timing-differences.png` and
+`delay-disagreement-stdev-histogram.png` into the corresponding result
+directory. The histogram contains the per-sky-position standard deviations of
+the total delay disagreement. Pass either a result directory or its
+`timing-components.npz` file. Use `--output figure.pdf` and
+`--histogram-output histogram.pdf` to select other paths or formats.
 
 ## Reproduced results
 

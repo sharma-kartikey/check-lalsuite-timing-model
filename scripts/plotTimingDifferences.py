@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: GPL-2.0-or-later
-"""Plot every timing-difference array found in a barycentering result."""
+"""Plot timing differences and their total standard-deviation distribution."""
 
 from __future__ import annotations
 
@@ -10,6 +10,7 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.ticker import MaxNLocator
 
 FIELD_ORDER = (
     "total",
@@ -134,6 +135,30 @@ def plot_result(
         plt.close(figure)
 
 
+def plot_std_histogram(
+    input_path: Path, output_path: Path, title: str | None, dpi: int
+) -> None:
+    with np.load(input_path) as result:
+        if "std_total" not in result:
+            raise KeyError(f"{input_path} does not contain std_total")
+        values = np.asarray(result["std_total"], dtype=float)
+        finite = values[np.isfinite(values)]
+        if not finite.size:
+            raise ValueError(f"{input_path} contains no finite std_total values")
+
+        scale, unit = display_scale(finite)
+        figure, axis = plt.subplots(figsize=(6.4, 4.2), constrained_layout=True)
+        axis.hist(scale * finite, bins="auto", edgecolor="black", linewidth=0.7)
+        axis.set_xlabel(f"Standard deviation of total delay disagreement [{unit}]")
+        axis.set_ylabel("Number of sky positions")
+        axis.yaxis.set_major_locator(MaxNLocator(integer=True))
+        axis.set_title(title or input_path.parent.name)
+        axis.grid(axis="y", alpha=0.25)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        figure.savefig(output_path, dpi=dpi)
+        plt.close(figure)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="plot all difference_* fields in timing-components.npz"
@@ -148,6 +173,14 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="output image path; defaults to RESULT/timing-differences.png",
     )
+    parser.add_argument(
+        "--histogram-output",
+        type=Path,
+        help=(
+            "standard-deviation histogram path; defaults to "
+            "RESULT/delay-disagreement-stdev-histogram.png"
+        ),
+    )
     parser.add_argument("--title", help="optional figure title")
     parser.add_argument("--dpi", type=int, default=150)
     return parser
@@ -158,10 +191,15 @@ def main() -> None:
     try:
         input_path = resolve_input(args.result)
         output_path = args.output or input_path.with_name("timing-differences.png")
+        histogram_path = args.histogram_output or input_path.with_name(
+            "delay-disagreement-stdev-histogram.png"
+        )
         plot_result(input_path, output_path, args.title, args.dpi)
+        plot_std_histogram(input_path, histogram_path, args.title, args.dpi)
     except (FileNotFoundError, KeyError, ValueError) as error:
         raise SystemExit(f"error: {error}") from error
     print(f"wrote {output_path}")
+    print(f"wrote {histogram_path}")
 
 
 if __name__ == "__main__":
